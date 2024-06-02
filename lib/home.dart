@@ -2,7 +2,9 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:guess/shared.dart';
+import 'package:toastification/toastification.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -15,30 +17,37 @@ class _HomeState extends State<Home> {
   final TextEditingController _guessController = TextEditingController();
   final GlobalKey<State<StatefulWidget>> _guessKey = GlobalKey<State<StatefulWidget>>();
 
+  int _hidden = 0;
+  final List<int> _attempts = <int>[];
+
   @override
   void initState() {
     _newGame();
     super.initState();
   }
 
+  void _showToast(String message, Color color) {
+    toastification.show(autoCloseDuration: 2.5.seconds, description: Text(message, style: TextStyle(fontSize: 14, color: color, fontWeight: FontWeight.w500)));
+  }
+
   void _newGame() {
-    attempts.clear();
-    hidden = Random().nextInt(101);
+    _attempts.clear();
+    _hidden = Random().nextInt(101);
   }
 
   void _guess() {
     if (_guessController.text.isEmpty) {
-      showToast(context, "Enter a valid number between 0 and 100", red);
-    } else if (int.parse(_guessController.text) < hidden) {
-      attempts.add(int.parse(_guessController.text));
+      _showToast("Enter a valid number between 0 and 100", red);
+    } else if (int.parse(_guessController.text) < _hidden) {
+      _attempts.add(int.parse(_guessController.text));
       _guessKey.currentState!.setState(() {});
-      showToast(context, "Too small", green);
-    } else if (int.parse(_guessController.text) > hidden) {
-      attempts.add(int.parse(_guessController.text));
+      _showToast("Too small", green);
+    } else if (int.parse(_guessController.text) > _hidden) {
+      _attempts.add(int.parse(_guessController.text));
       _guessKey.currentState!.setState(() {});
-      showToast(context, "Too big", blue);
+      _showToast("Too big", blue);
     } else {
-      attempts.add(int.parse(_guessController.text));
+      _attempts.add(int.parse(_guessController.text));
       _guessKey.currentState!.setState(() {});
       showModalBottomSheet(
         context: context,
@@ -46,52 +55,71 @@ class _HomeState extends State<Home> {
         elevation: 8,
         enableDrag: false,
         showDragHandle: true,
-        builder: (BuildContext context) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text("Congratulations", style: TextStyle(fontSize: 20, color: dark, fontWeight: FontWeight.w500)),
-            Expanded(
-              child: ListView.separated(
-                itemBuilder: (BuildContext context, int index) => Card(
-                  color: white,
-                  elevation: 8,
-                  shadowColor: dark,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    child: RichText(
-                      text: TextSpan(
-                        children: <TextSpan>[
-                          TextSpan(text: "${attempts[index]}", style: const TextStyle(fontSize: 16, color: pink, fontWeight: FontWeight.w500)),
-                          const TextSpan(text: " is ", style: TextStyle(fontSize: 16, color: dark, fontWeight: FontWeight.w500)),
-                          TextSpan(text: attempts[index] < hidden ? "less than" : "bigger than", style: TextStyle(fontSize: 16, color: attempts[index] < hidden ? red : green, fontWeight: FontWeight.w500)),
-                          TextSpan(text: " $hidden", style: const TextStyle(fontSize: 16, color: blue, fontWeight: FontWeight.w500)),
-                        ],
+        builder: (BuildContext context) => Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text("Congratulations", style: TextStyle(fontSize: 20, color: dark, fontWeight: FontWeight.w500)),
+              Expanded(
+                child: ListView.separated(
+                  itemBuilder: (BuildContext context, int index) => Card(
+                    color: white,
+                    elevation: 8,
+                    shadowColor: dark,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: RichText(
+                        text: TextSpan(
+                          children: <TextSpan>[
+                            TextSpan(text: "${_attempts[index]}", style: const TextStyle(fontSize: 16, color: pink, fontWeight: FontWeight.w500)),
+                            const TextSpan(text: " is ", style: TextStyle(fontSize: 16, color: dark, fontWeight: FontWeight.w500)),
+                            TextSpan(
+                                text: _attempts[index] == _hidden
+                                    ? "equal to"
+                                    : _attempts[index] < _hidden
+                                        ? "less than"
+                                        : "bigger than",
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    color: _attempts[index] == _hidden
+                                        ? gold
+                                        : _attempts[index] < _hidden
+                                            ? red
+                                            : green,
+                                    fontWeight: FontWeight.w500)),
+                            TextSpan(text: " $_hidden", style: const TextStyle(fontSize: 16, color: blue, fontWeight: FontWeight.w500)),
+                          ],
+                        ),
                       ),
                     ),
                   ),
+                  separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 10),
+                  itemCount: _attempts.length,
                 ),
-                separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 10),
-                itemCount: attempts.length,
               ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                TextButton(
-                  style: const ButtonStyle(backgroundColor: WidgetStatePropertyAll<Color>(blue)),
-                  onPressed: () {
-                    _newGame();
-                    _guessKey.currentState!.setState(() {});
-                    Navigator.pop(context);
-                  },
-                  child: const Text("New Game", style: TextStyle(fontSize: 18, color: dark, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 10),
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    TextButton(
+                      style: const ButtonStyle(backgroundColor: WidgetStatePropertyAll<Color>(blue)),
+                      onPressed: () {
+                        _newGame();
+                        _guessKey.currentState!.setState(() {});
+                        _guessController.clear();
+                        Navigator.pop(context);
+                      },
+                      child: const Text("New Game", style: TextStyle(fontSize: 18, color: dark, fontWeight: FontWeight.w500)),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -130,15 +158,21 @@ class _HomeState extends State<Home> {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   const Text("You need to predict the value of an integer from 0 to 100", style: TextStyle(fontSize: 18, color: dark, fontWeight: FontWeight.w500)),
-                  if (attempts.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: 20),
-                    StatefulBuilder(
-                      key: _guessKey,
-                      builder: (BuildContext context, void Function(void Function()) _) {
-                        return Text("You've made ${attempts.length} attempt${attempts.length == 1 ? 's' : ''}", style: const TextStyle(fontSize: 22, color: dark, fontWeight: FontWeight.w500));
-                      },
-                    ),
-                  ],
+                  StatefulBuilder(
+                    key: _guessKey,
+                    builder: (BuildContext context, void Function(void Function()) _) {
+                      return _attempts.isEmpty
+                          ? const SizedBox()
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                const SizedBox(height: 20),
+                                Text("You've made ${_attempts.length} attempt${_attempts.length == 1 ? 's' : ''}", style: const TextStyle(fontSize: 22, color: dark, fontWeight: FontWeight.w500)),
+                              ],
+                            );
+                    },
+                  ),
                   const SizedBox(height: 20),
                   Card(
                     color: white,
@@ -155,10 +189,10 @@ class _HomeState extends State<Home> {
                           hintText: "Guess",
                           alignLabelWithHint: true,
                         ),
-                        onSubmitted: (String value) => _guess,
+                        onEditingComplete: _guess,
                         inputFormatters: <TextInputFormatter>[
                           FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(2),
+                          LengthLimitingTextInputFormatter(3),
                         ],
                       ),
                     ),
